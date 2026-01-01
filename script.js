@@ -8,9 +8,31 @@ const CONFIG = {
     // Dynamic target:
     // Month is 0-indexed (0 = January)
     targetDate: new Date(2026, 0, 1, 0, 0, 0).getTime(),
-    colors: ['#d4af37', '#ffffff', '#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#00FFFF'],
-    fireworksChance: 0.05, // Chance per frame to launch auto firework
+    colors: [
+        'oklch(85% 0.18 85)',   // Gold
+        'oklch(100% 0 0)',      // White
+        'oklch(65% 0.22 30)',   // Red/Orange
+        'oklch(70% 0.19 145)',  // Green
+        'oklch(60% 0.2 250)',   // Blue
+        'oklch(75% 0.2 330)',   // Pink
+        'oklch(80% 0.15 200)',  // Cyan
+        'oklch(85% 0.2 130)',   // Lime
+        'oklch(65% 0.22 290)',  // Purple
+        'oklch(60% 0.25 310)'   // Magenta
+    ],
+    fireworksChance: 0.02, // Chance per frame to launch auto firework
 };
+
+// Crypto Random Helper
+const random = () => {
+    const u32 = new Uint32Array(1);
+    window.crypto.getRandomValues(u32);
+    return u32[0] / 0xFFFFFFFF;
+};
+
+// Override default Math.random for consistency if needed, 
+// but sticking to a dedicated function is safer to avoid side effects.
+// We have replaced usage of Math.random() with random() below.
 
 // DOM Elements
 const elements = {
@@ -54,7 +76,7 @@ class AudioEngine {
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
+            data[i] = random() * 2 - 1;
         }
 
         const noise = this.ctx.createBufferSource();
@@ -62,10 +84,10 @@ class AudioEngine {
 
         // Lowpass filter to make it sound like a boom, not static
         filter.type = 'lowpass';
-        filter.frequency.value = 800;
+        filter.frequency.value = 600; // Lower frequency for softer boom
 
         // Envelope
-        gain.gain.setValueAtTime(1, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime); // Reduced volume
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1);
 
         noise.connect(filter);
@@ -128,14 +150,14 @@ class AmbientParticle {
     }
 
     reset() {
-        this.x = Math.random() * elements.canvas.width;
-        this.y = Math.random() * elements.canvas.height;
-        this.vx = (Math.random() - 0.5) * 0.5;
-        this.vy = (Math.random() - 0.5) * 0.5;
-        this.size = Math.random() * 2 + 0.5;
-        this.color = CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
-        this.opacity = Math.random() * 0.5 + 0.1;
-        this.life = Math.random() * 100 + 100;
+        this.x = random() * elements.canvas.width;
+        this.y = random() * elements.canvas.height;
+        this.vx = (random() - 0.5) * 0.5;
+        this.vy = (random() - 0.5) * 0.5;
+        this.size = random() * 2 + 0.5;
+        this.color = CONFIG.colors[Math.floor(random() * CONFIG.colors.length)];
+        this.opacity = random() * 0.5 + 0.1;
+        this.life = random() * 100 + 100;
     }
 
     update() {
@@ -164,17 +186,18 @@ class AmbientParticle {
 }
 
 class Particle {
-    constructor(x, y, color) {
+    constructor(x, y, color, scale = 1) {
         this.x = x;
         this.y = y;
         this.color = color;
         // Random velocity in all directions
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 5 + 1;
+        const angle = random() * Math.PI * 2;
+        // Base speed 1-6, scaled by explosion size
+        const speed = (random() * 5 + 1) * scale;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.alpha = 1;
-        this.decay = Math.random() * 0.015 + 0.005;
+        this.decay = (random() * 0.015 + 0.005) / scale; // Larger blasts fade slower
         this.gravity = 0.05;
     }
 
@@ -204,11 +227,11 @@ class Firework {
         this.x = x;
         this.y = y;
         this.targetY = targetY;
-        this.color = CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
+        this.color = CONFIG.colors[Math.floor(random() * CONFIG.colors.length)];
         this.speed = 2;
         this.angle = -Math.PI / 2;
-        this.vx = (Math.random() - 0.5) * 2; // Slight drift
-        this.vy = -Math.random() * 3 - 8; // Shoot up
+        this.vx = (random() - 0.5) * 2; // Slight drift
+        this.vy = -random() * 3 - 8; // Shoot up
         this.exploded = false;
         
         audio.playLaunch();
@@ -235,8 +258,12 @@ class Firework {
 
     explode() {
         audio.playExplosion();
-        for (let i = 0; i < 50; i++) {
-            particles.push(new Particle(this.x, this.y, this.color));
+        // Random scale factor (0.5x to 1.5x)
+        const scale = random() + 0.5;
+        const count = Math.floor(50 * scale);
+        
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(this.x, this.y, this.color, scale));
         }
     }
 }
@@ -250,7 +277,8 @@ function initAmbientParticles() {
 
 function animate() {
     // Fade out trail effect
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    // Fade out trail effect (using OKLCH black with alpha)
+    ctx.fillStyle = 'oklch(0% 0 0 / 0.2)';
     ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
 
     // Draw Ambient Particles (Glitter)
@@ -274,7 +302,7 @@ function animate() {
     });
 
     // Auto launch in New Year Mode
-    if (isNewYear && Math.random() < CONFIG.fireworksChance) {
+    if (isNewYear && random() < CONFIG.fireworksChance) {
         launchFirework();
     }
 
@@ -282,9 +310,9 @@ function animate() {
 }
 
 function launchFirework(x) {
-    const startX = x || Math.random() * elements.canvas.width;
+    const startX = x || random() * elements.canvas.width;
     const startY = elements.canvas.height;
-    const targetY = Math.random() * (elements.canvas.height / 2);
+    const targetY = random() * (elements.canvas.height / 2);
     fireworks.push(new Firework(startX, startY, targetY));
 }
 

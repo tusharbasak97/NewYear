@@ -1,12 +1,26 @@
 :root {
-    --bg-color: #050505;
-    --text-primary: #ffffff;
-    --text-secondary: #e0e0e0;
-    --accent: #d4af37; /* Gold */
-    --glass-bg: rgba(255, 255, 255, 0.1); /* Increased opacity */
-    --glass-border: rgba(255, 255, 255, 0.2); /* Stronger border */
+    --bg-base: oklch(15% 0.02 280);
+    --bg-deep: oklch(5% 0.02 280);
+    
+    --text-primary: oklch(98% 0 0);
+    --text-secondary: oklch(85% 0.02 280);
+    --text-muted: oklch(70% 0.05 280);
+
+    --accent-gold: oklch(78% 0.18 85);
+    --accent-gold-dim: oklch(65% 0.12 85);
+    --accent-glow: oklch(85% 0.15 85);
+    
+    --highlight-blue: oklch(70% 0.15 240); 
+    --highlight-purple: oklch(65% 0.20 300);
+
+    --glass-bg: oklch(100% 0 0 / 0.08); 
+    --glass-border: oklch(100% 0 0 / 0.15);
+    
     --font-sans: 'Outfit', sans-serif;
     --font-serif: 'Cinzel Decorative', cursive;
+    
+    --shadow-sm: 0 4px 6px -1px oklch(0% 0 0 / 0.1), 0 2px 4px -1px oklch(0% 0 0 / 0.06);
+    --shadow-lg: 0 10px 15px -3px oklch(0% 0 0 / 0.15), 0 4px 6px -2px oklch(0% 0 0 / 0.1);
 }
 
 * {
@@ -16,15 +30,19 @@
 }
 
 body {
-    background-color: var(--bg-color);
+    background-color: var(--bg-deep);
+    background-image: 
+        radial-gradient(circle at 15% 50%, color-mix(in oklch, var(--highlight-purple), transparent 90%), transparent 40%),
+        radial-gradient(circle at 85% 30%, color-mix(in oklch, var(--highlight-blue), transparent 92%), transparent 40%);
     color: var(--text-primary);
     font-family: var(--font-sans);
-    overflow: hidden; /* Prevent scroll on canvas */
+    overflow: hidden;
     height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     position: relative;
+    perspective: 1000px;
 }
 
 #canvas {
@@ -39,72 +57,109 @@ body {
 .glass-card {
     position: relative;
     z-index: 10;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    /* Premium Glassmorphism */
+    background: linear-gradient(
+        135deg,
+        oklch(100% 0 0 / 0.15),
+        oklch(100% 0 0 / 0.05)
+    );
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
-    border-top: 1px solid rgba(255, 255, 255, 0.4); /* Highlight top border */
-    border-left: 1px solid rgba(255, 255, 255, 0.4); /* Highlight left border */
+    
+    /* Light border top-left, dark border bottom-right */
+    border: 1px solid oklch(100% 0 0 / 0.2);
+    border-right: 1px solid oklch(100% 0 0 / 0.1);
+    border-bottom: 1px solid oklch(100% 0 0 / 0.1);
+    
     padding: 3rem 4rem;
-    border-radius: 24px;
+    border-radius: 32px;
     text-align: center;
-    max-width: 500px;
+    /* Flexbox for strict centering */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 550px;
     width: 90%;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Deep shadow */
-    animation: fadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    
+    /* Deep shadow for separation */
+    box-shadow: 
+        0 4px 30px oklch(0% 0 0 / 0.1),
+        inset 0 0 0 1px oklch(100% 0 0 / 0.1);
+        
+    animation: fadeUp 1.2s cubic-bezier(0.2, 1, 0.3, 1) forwards;
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px) translateZ(0);
+    will-change: transform, opacity;
+}
+
+.glass-card > :last-child {
+    margin-bottom: 0;
 }
 
 @keyframes fadeUp {
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
     }
 }
 
 .subtitle {
-    color: var(--accent);
+    color: var(--accent-gold);
     font-size: 0.875rem;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    margin-bottom: 1rem;
+    letter-spacing: 0.25em;
+    margin-bottom: 0.75rem;
     font-weight: 600;
+    text-shadow: 0 0 20px color-mix(in oklch, var(--accent-gold), transparent 70%);
 }
 
 h1 {
     font-family: var(--font-serif);
-    font-size: 3.5rem;
+    font-size: 3.75rem;
     line-height: 1.1;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #fff 0%, #ddd 100%);
+    margin-bottom: 0.25rem;
+    background: linear-gradient(135deg, var(--text-primary) 20%, var(--text-secondary) 80%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    /* filter: drop-shadow(0 0 2px oklch(0% 0 0 / 0.3)); Removed for text-shadow glow */
+    animation: glowText 3s ease-in-out infinite alternate;
 }
 
 h2 {
     font-family: var(--font-serif);
-    font-size: 5rem;
-    color: var(--accent);
+    font-size: 6rem;
+    color: var(--accent-gold);
     line-height: 1;
     margin-bottom: 2rem;
-    text-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+    background: linear-gradient(180deg, var(--accent-gold) 20%, var(--accent-gold-dim) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* filter: drop-shadow(0 0 30px color-mix(in oklch, var(--accent-gold), transparent 80%)); Removed for text-shadow glow */
+    animation: glowText 3s ease-in-out infinite alternate;
 }
 
 .message {
     color: var(--text-secondary);
-    font-size: 1.1rem;
-    line-height: 1.6;
+    font-size: 1.125rem;
+    line-height: 1.7;
     margin-bottom: 2.5rem;
     font-weight: 300;
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Countdown Styles */
 .countdown {
     display: flex;
     justify-content: center;
-    gap: 1.5rem;
+    gap: 2rem;
     margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: oklch(0% 0 0 / 0.2);
+    border-radius: 20px;
+    border: 1px solid oklch(100% 0 0 / 0.05);
 }
 
 .hidden {
@@ -115,28 +170,33 @@ h2 {
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-width: 60px;
 }
 
 .time-unit span {
     font-family: var(--font-serif);
-    font-size: 2rem;
+    font-size: 2.25rem;
     font-weight: 700;
     color: var(--text-primary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 10px oklch(0% 0 0 / 0.3);
 }
 
 .time-unit label {
     font-size: 0.75rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 0.25rem;
+    letter-spacing: 0.15em;
+    margin-top: 0.5rem;
+    font-weight: 500;
 }
 
-
-
+/* Responsive */
 @media (max-width: 480px) {
     .glass-card {
-        padding: 2rem;
+        padding: 2rem 1.5rem;
+        width: 95%;
     }
     
     h1 {
@@ -144,24 +204,40 @@ h2 {
     }
     
     h2 {
-        font-size: 3.5rem;
+        font-size: 4rem;
     }
 
     .countdown {
         gap: 1rem;
+        padding: 1rem;
     }
 
     .time-unit span {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
+    }
+    
+    .time-unit {
+        min-width: 45px;
     }
 }
 
 /* Celebration Mode Enhancements */
 .celebration-mode h1, .celebration-mode h2 {
-    animation: glowText 2s infinite alternate;
+    /* Already has persistent glow */
+}
+
+.celebration-mode .glass-card {
+    box-shadow: 0 8px 32px 0 oklch(0% 0 0 / 0.4),
+                0 0 50px color-mix(in oklch, var(--accent-gold), transparent 90%);
 }
 
 @keyframes glowText {
-    from { text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
-    to { text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 10px rgba(255, 255, 255, 0.5); }
+    from { 
+        text-shadow: 0 0 10px color-mix(in oklch, var(--accent-gold), transparent 85%),
+                     0 0 20px color-mix(in oklch, var(--accent-gold), transparent 85%);
+    }
+    to { 
+        text-shadow: 0 0 20px color-mix(in oklch, var(--accent-gold), transparent 60%),
+                     0 0 40px color-mix(in oklch, var(--accent-gold), transparent 50%);
+    }
 }
