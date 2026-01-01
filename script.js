@@ -1,5 +1,5 @@
 /**
- * Happy New Year 2026
+ * Happy New Year 2027
  * Tushar Basak
  */
 
@@ -7,7 +7,7 @@
 const CONFIG = {
     // Dynamic target:
     // Month is 0-indexed (0 = January)
-    targetDate: new Date(2026, 0, 1, 0, 0, 0).getTime(),
+    targetDate: new Date(2027, 0, 1, 0, 0, 0).getTime(),
     colors: [
         'oklch(85% 0.18 85)',   // Gold
         'oklch(100% 0 0)',      // White
@@ -45,6 +45,7 @@ const elements = {
     minutes: document.getElementById('minutes'),
     seconds: document.getElementById('seconds'),
     canvas: document.getElementById('canvas'),
+    canvasFg: document.getElementById('canvas-fg'),
     main: document.querySelector('main')
 };
 
@@ -134,6 +135,7 @@ function initPersonalization() {
 
 // --- Visual Engine (Fireworks & Glitter) ---
 const ctx = elements.canvas.getContext('2d');
+const ctxFg = elements.canvasFg.getContext('2d');
 let particles = []; // Explosion particles
 let fireworks = [];
 let ambientParticles = []; // Background glitter
@@ -141,6 +143,8 @@ let ambientParticles = []; // Background glitter
 function resizeCanvas() {
     elements.canvas.width = window.innerWidth;
     elements.canvas.height = window.innerHeight;
+    elements.canvasFg.width = window.innerWidth;
+    elements.canvasFg.height = window.innerHeight;
     initAmbientParticles(); // Re-init on resize to fill screen
 }
 
@@ -186,10 +190,11 @@ class AmbientParticle {
 }
 
 class Particle {
-    constructor(x, y, color, scale = 1) {
+    constructor(x, y, color, scale = 1, isForeground = false) {
         this.x = x;
         this.y = y;
         this.color = color;
+        this.isForeground = isForeground;
         // Random velocity in all directions
         const angle = random() * Math.PI * 2;
         // Base speed 1-6, scaled by explosion size
@@ -223,11 +228,12 @@ class Particle {
 }
 
 class Firework {
-    constructor(x, y, targetY) {
+    constructor(x, y, targetY, isForeground = false) {
         this.x = x;
         this.y = y;
         this.targetY = targetY;
         this.color = CONFIG.colors[Math.floor(random() * CONFIG.colors.length)];
+        this.isForeground = isForeground;
         this.speed = 2;
         this.angle = -Math.PI / 2;
         this.vx = (random() - 0.5) * 2; // Slight drift
@@ -263,7 +269,7 @@ class Firework {
         const count = Math.floor(50 * scale);
         
         for (let i = 0; i < count; i++) {
-            particles.push(new Particle(this.x, this.y, this.color, scale));
+            particles.push(new Particle(this.x, this.y, this.color, scale, this.isForeground));
         }
     }
 }
@@ -281,6 +287,13 @@ function animate() {
     ctx.fillStyle = 'oklch(0% 0 0 / 0.2)';
     ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
 
+    // Fade FG
+    ctxFg.save();
+    ctxFg.globalCompositeOperation = 'destination-out';
+    ctxFg.fillStyle = 'oklch(0% 0 0 / 0.2)';
+    ctxFg.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+    ctxFg.restore();
+
     // Draw Ambient Particles (Glitter)
     ambientParticles.forEach(p => {
         p.update();
@@ -290,14 +303,14 @@ function animate() {
     // Update Fireworks
     fireworks = fireworks.filter(fw => {
         const alive = fw.update();
-        if (alive) fw.draw(ctx);
+        if (alive) fw.draw(fw.isForeground ? ctxFg : ctx);
         return alive;
     });
 
     // Update Explosion Particles
     particles = particles.filter(p => {
         const alive = p.update();
-        if (alive) p.draw(ctx);
+        if (alive) p.draw(p.isForeground ? ctxFg : ctx);
         return alive;
     });
 
@@ -313,7 +326,9 @@ function launchFirework(x) {
     const startX = x || random() * elements.canvas.width;
     const startY = elements.canvas.height;
     const targetY = random() * (elements.canvas.height / 2);
-    fireworks.push(new Firework(startX, startY, targetY));
+    // 90% chance for foreground
+    const isForeground = random() < 0.5;
+    fireworks.push(new Firework(startX, startY, targetY, isForeground));
 }
 
 // --- Time Engine ---
