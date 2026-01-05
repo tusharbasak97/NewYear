@@ -4,19 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Happy New Year 2027 | Tushar Basak</title>
-    <meta name="description" content="A special New Year wish from Tushar Basak">
+    <!-- Description for Search Engines -->
+    <meta name="description" content="A special New Year wish from Tushar Basak. Experience the fireworks and celebration!">
+    
+    <!-- Open Graph / SEO (Social Media Previews) -->
+    <meta property="og:title" content="Happy New Year 2027 | Tushar Basak">
+    <meta property="og:description" content="A special New Year wish from Tushar Basak. Experience the fireworks and celebration!">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="cover.png"> <!-- Placeholder/Reminder to user -->
+    <meta property="og:url" content="https://tusharbasak.com"> <!-- Placeholder -->
+    
+    <!-- Branding -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    
+    <!-- Fonts: 'Cinzel Decorative' for elegant headings, 'Outfit' for modern body text -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- Styles & Scripts -->
     <link rel="stylesheet" href="style.css">
     <link rel="preload" href="style.css" as="style">
     <link rel="preload" href="script.js?v=2" as="script">
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <canvas id="canvas-fg"></canvas>
+    <!-- Visual Layers: Background used for trails/glitter, Foreground for sharp particles -->
+    <canvas id="canvas" role="img" aria-label="Interactive fireworks display background"></canvas>
+    <canvas id="canvas-fg" role="img" aria-hidden="true"></canvas>
     
+    <!-- UI Controls: Audio Visualizer -->
+    <div id="audio-control" class="audio-control" aria-label="Toggle Audio" role="button" tabindex="0">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+    </div>
+
+    <!-- Main Content Card: Glassmorphism Effect -->
     <main class="glass-card">
         <header>
             <p class="subtitle">From Tushar Basak</p>
@@ -24,6 +48,7 @@
             <h2 id="year">2027</h2>
         </header>
         
+        <!-- Countdown Container (Hidden during celebration mode) -->
         <div id="countdown" class="countdown hidden">
             <div class="time-unit">
                 <span id="days">00</span>

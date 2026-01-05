@@ -335,23 +335,58 @@ function launchFirework(x) {
 let isNewYear = false;
 
 function updateTimer() {
-    const now = new Date().getTime();
-    const distance = CONFIG.targetDate - now;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0 = Jan
+    const currentDate = now.getDate();
 
-    if (distance < 0) {
+    // Check if we are in the "Celebration Window" (Jan 1 to Jan 5)
+    // Note: Month is 0-indexed.
+    if (currentMonth === 0 && currentDate >= 1 && currentDate <= 5) {
         if (!isNewYear) {
-            // TRANSITION TO NEW YEAR
             isNewYear = true;
             elements.countdown.style.display = 'none';
             elements.year.classList.remove('hidden');
+            elements.year.textContent = currentYear; // Ensure current celebration year is shown
             elements.main.classList.add('celebration-mode');
+            
+            // Update greeting if needed
+            if (!elements.greeting.textContent.includes('Happy New Year')) {
+                 elements.greeting.textContent = 'Happy New Year';
+            }
+            // Update Title
+            document.title = `Happy New Year ${currentYear} | Tushar Basak`;
         }
-        return;
+        return; // Exit, no countdown needed
     }
 
-    // Standard Countdown
-    isNewYear = false;
-    elements.countdown.style.display = 'flex'; // Ensure visible
+    // Determine target date (Next January 1st)
+    // If today is after Jan 5th, target is next year.
+    // Use Math.max to ensure we don't go backwards if system time is weird, 
+    // but typically: if not in Jan 1-5, we want next Jan 1.
+    // Example: Jan 6, 2025 -> Target: Jan 1, 2026.
+    // Example: Dec 31, 2025 -> Target: Jan 1, 2026.
+    
+    let targetYear = currentYear + 1;
+    // If for some reason we are in December, target is next year (already covered by +1)
+    
+    const targetDate = new Date(targetYear, 0, 1, 0, 0, 0).getTime();
+    const distance = targetDate - now.getTime();
+
+    // Standard Countdown Mode
+    if (isNewYear) {
+        // Reset from celebration mode if date changes while open
+        isNewYear = false;
+        elements.year.classList.add('hidden');
+        elements.main.classList.remove('celebration-mode');
+    }
+    
+    // Update Title for countdown
+    if (document.title.indexOf(String(targetYear)) === -1) {
+         document.title = `Happy New Year ${targetYear} | Tushar Basak`;
+    }
+
+    elements.countdown.style.display = 'flex';
     elements.countdown.classList.remove('hidden');
     elements.year.classList.add('hidden');
 
@@ -367,16 +402,176 @@ function updateTimer() {
 }
 
 // --- Interaction ---
-window.onclick = () => {
-    audio.init(); // Enable audio on first click
-    if (isNewYear) launchFirework(); // Click to explode
+// Mouse state for glitter interaction
+const mouse = { x: -1000, y: -1000 };
+window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+});
+// Touch support for interaction
+window.addEventListener('touchstart', (e) => {
+    mouse.x = e.touches[0].clientX;
+    mouse.y = e.touches[0].clientY;
+    
+    // Auto launch firework on touch if in New Year mode
+    if (isNewYear) {
+        launchFirework(mouse.x);
+    }
+    
+    audio.init(); // Init audio on touch
+});
+window.addEventListener('touchmove', (e) => {
+    mouse.x = e.touches[0].clientX;
+    mouse.y = e.touches[0].clientY;
+});
+window.addEventListener('touchend', () => {
+    mouse.x = -1000;
+    mouse.y = -1000;
+});
+
+
+// Ambient Particle Update with Mouse Interaction
+AmbientParticle.prototype.update = function() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life--;
+
+    // Mouse Interaction
+    const dx = this.x - mouse.x;
+    const dy = this.y - mouse.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const repulsionRadius = 150;
+
+    if (distance < repulsionRadius) {
+        const force = (repulsionRadius - distance) / repulsionRadius;
+        const angle = Math.atan2(dy, dx);
+        const push = force * 2; // Strength
+        
+        this.x += Math.cos(angle) * push;
+        this.y += Math.sin(angle) * push;
+    }
+
+    // Wrap around
+    if (this.x < 0) this.x = elements.canvas.width;
+    if (this.x > elements.canvas.width) this.x = 0;
+    if (this.y < 0) this.y = elements.canvas.height;
+    if (this.y > elements.canvas.height) this.y = 0;
+
+    if (this.life <= 0) this.reset();
 };
+
+
+// Sound Toggle Logic (Audio Visualizer)
+const audioControl = document.getElementById('audio-control');
+let isPlaying = true; // Default: Playing (Unmuted)
+
+// Update UI
+function updateSoundUI() {
+    if (isPlaying) {
+        audioControl.classList.add('playing');
+        audioControl.setAttribute('aria-label', 'Mute Audio');
+        audio.init();
+        audio.enabled = true;
+    } else {
+        audioControl.classList.remove('playing');
+        audioControl.setAttribute('aria-label', 'Play Audio');
+        audio.enabled = false;
+        if(audio.ctx) audio.ctx.suspend();
+    }
+}
+
+audioControl.addEventListener('click', (e) => {
+    e.stopPropagation(); // Don't trigger fireworks
+    isPlaying = !isPlaying;
+    updateSoundUI();
+});
+
+
+
+
+// Update global click handler to NOT handle audio init blindly, let specific interactions do it.
+window.onclick = (e) => {
+    // If clicking on controls, ignore.
+    if (e.target.closest('.audio-control') || e.target.closest('button')) return;
+    
+    // If playing but context is suspended (browser policy), resume on first click
+    if (isPlaying && audio.ctx && audio.ctx.state === 'suspended') {
+        audio.ctx.resume();
+    }
+    
+    if (isNewYear) launchFirework(e.clientX);
+};
+
+
+// Reduced Motion Preference
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 // --- Initialization ---
 window.addEventListener('resize', resizeCanvas);
 initPersonalization();
 initAmbientParticles(); // Initialize glitter
 resizeCanvas();
-animate();
+
+// Initialize sound UI
+updateSoundUI();
+
+function animateLoop() {
+    requestAnimationFrame(animateLoop);
+    animate();
+}
+animateLoop();
+
 setInterval(updateTimer, 1000);
 updateTimer();
+
+// Modify launchFirework to respect reduced motion
+// Overwrite the launch logic slightly to check preference
+const originalLaunch = launchFirework;
+launchFirework = function(x) {
+    if (prefersReducedMotion.matches && isNewYear) {
+         // In reduced motion, maybe just fewer particles or no launch, just static gentle fade?
+         // For now, let's limit the frequency drastically or stop auto-launch.
+         // But manual clicks might still want feedback?
+         // Let's allow manual clicks but disable auto-launch in standard loop.
+    }
+    originalLaunch(x);
+};
+
+// Modify animate loop for auto-fireworks respecting reduced motion
+const originalAnimate = animate;
+animate = function() {
+    // Fade out trail effect
+    ctx.fillStyle = 'oklch(0% 0 0 / 0.2)';
+    ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+
+    ctxFg.save();
+    ctxFg.globalCompositeOperation = 'destination-out';
+    ctxFg.fillStyle = 'oklch(0% 0 0 / 0.2)';
+    ctxFg.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+    ctxFg.restore();
+
+    // Glitter
+    ambientParticles.forEach(p => {
+        p.update();
+        p.draw(ctx);
+    });
+
+    // Fireworks
+    fireworks = fireworks.filter(fw => {
+        const alive = fw.update();
+        if (alive) fw.draw(fw.isForeground ? ctxFg : ctx);
+        return alive;
+    });
+
+    particles = particles.filter(p => {
+        const alive = p.update();
+        if (alive) p.draw(p.isForeground ? ctxFg : ctx);
+        return alive;
+    });
+
+    // Auto Launch - Disable if Reduced Motion
+    if (isNewYear && !prefersReducedMotion.matches && random() < CONFIG.fireworksChance) {
+        launchFirework();
+    }
+}
+
